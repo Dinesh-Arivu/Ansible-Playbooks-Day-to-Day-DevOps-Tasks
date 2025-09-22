@@ -1,0 +1,14 @@
+---
+- name: Create DevOps users
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create user devops
+      user:
+        name: devops
+        shell: /bin/bash
+        state: present
+    - name: Add authorized key for devops
+      authorized_key:
+        user: devops
+        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"

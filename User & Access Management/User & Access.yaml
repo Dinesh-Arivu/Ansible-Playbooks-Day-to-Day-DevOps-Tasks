@@ -1,14 +1,53 @@
 ---
-- name: Create DevOps users
+- name: Manage users and access
   hosts: all
   become: yes
+
+  vars:
+    users:
+      - name: devops
+        groups: sudo
+        ssh_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      - name: deploy
+        groups: sudo
+        ssh_key: "{{ lookup('file', '~/.ssh/deploy.pub') }}"
+
   tasks:
-    - name: Create user devops
+    - name: Ensure users exist
       user:
-        name: devops
+        name: "{{ item.name }}"
         shell: /bin/bash
         state: present
-    - name: Add authorized key for devops
+        groups: "{{ item.groups | default(omit) }}"
+      loop: "{{ users }}"
+
+    - name: Add authorized SSH keys
       authorized_key:
-        user: devops
-        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+        user: "{{ item.name }}"
+        key: "{{ item.ssh_key }}"
+      loop: "{{ users }}"
+
+    - name: Allow passwordless sudo for DevOps team
+      copy:
+        dest: "/etc/sudoers.d/{{ item.name }}"
+        content: "{{ item.name }} ALL=(ALL) NOPASSWD:ALL"
+        mode: '0440'
+      loop: "{{ users }}"
+      when: "'sudo' in item.groups | default('')"
+
+    - name: Harden SSH - disable root login & password auth
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+      with_items:
+        - { regexp: '^PermitRootLogin', line: 'PermitRootLogin no' }
+        - { regexp: '^PasswordAuthentication', line: 'PasswordAuthentication no' }
+      notify: Restart SSH
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: ssh
+        state: restarted

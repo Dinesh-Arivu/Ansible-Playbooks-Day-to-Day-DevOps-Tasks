@@ -1,8 +1,13 @@
 ---
-- name: Deploy k8s app
+- name: Deploy Kubernetes application
   hosts: localhost
   tasks:
-    - name: Apply deployment file
+    - name: Apply Kubernetes manifests
       k8s:
         state: present
         src: k8s/deployment.yaml
+
+    - name: Apply Kubernetes service
+      k8s:
+        state: present
+        src: k8s/service.yaml

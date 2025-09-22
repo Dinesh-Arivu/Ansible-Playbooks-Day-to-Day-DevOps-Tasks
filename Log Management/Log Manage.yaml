@@ -1,0 +1,16 @@
+---
+- name: Clear old logs
+  hosts: all
+  become: yes
+  tasks:
+    - name: Remove logs older than 7 days
+      find:
+        paths: /var/log
+        age: 7d
+        recurse: yes
+      register: old_logs
+    - name: Delete old logs
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs.files }}"

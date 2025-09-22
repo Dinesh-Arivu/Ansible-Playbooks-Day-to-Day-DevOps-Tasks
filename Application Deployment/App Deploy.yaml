@@ -2,13 +2,48 @@
 - name: Deploy application
   hosts: webservers
   become: yes
+
+  vars:
+    app_repo: "https://github.com/example/app.git"
+    app_dest: "/var/www/app"
+    app_branch: "main"
+    app_service: "app"
+
   tasks:
-    - name: Pull latest code
+    - name: Ensure destination directory exists
+      file:
+        path: "{{ app_dest }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: Pull latest code from GitHub
       git:
-        repo: https://github.com/example/app.git
-        dest: /var/www/app
-        version: main
-    - name: Restart app service
+        repo: "{{ app_repo }}"
+        dest: "{{ app_dest }}"
+        version: "{{ app_branch }}"
+        force: yes
+        update: yes
+
+    - name: Install dependencies (example for Node.js apps)
+      npm:
+        path: "{{ app_dest }}"
+      when: "'package.json' in lookup('ansible.builtin.fileglob', app_dest + '/*', errors='ignore')"
+
+    - name: Run database migrations (example for Django)
+      command: python3 manage.py migrate
+      args:
+        chdir: "{{ app_dest }}"
+      when: "'manage.py' in lookup('ansible.builtin.fileglob', app_dest + '/*', errors='ignore')"
+
+    - name: Restart application service
       systemd:
-        name: app
+        name: "{{ app_service }}"
         state: restarted
+        enabled: yes
+
+    - name: Ensure app service is running
+      systemd:
+        name: "{{ app_service }}"
+        state: started

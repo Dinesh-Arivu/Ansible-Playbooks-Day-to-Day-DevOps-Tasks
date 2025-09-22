@@ -1,9 +1,46 @@
 ---
-- name: Apply security updates
+- name: Apply security updates and patches
   hosts: all
   become: yes
+
   tasks:
-    - name: Upgrade all packages
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Apply security updates
       apt:
         upgrade: dist
         autoremove: yes
+
+    - name: Clean up unused packages
+      apt:
+        autoclean: yes
+
+    - name: Check if reboot is required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+      changed_when: false
+
+    - name: Reboot if needed
+      reboot:
+        msg: "Reboot initiated by Ansible after kernel/security updates"
+        connect_timeout: 30
+        reboot_timeout: 600
+        pre_reboot_delay: 5
+        post_reboot_delay: 30
+      when: reboot_required.stat.exists
+
+    - name: Install unattended-upgrades package
+      apt:
+        name: unattended-upgrades
+        state: present
+
+    - name: Enable automatic security updates
+      copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";

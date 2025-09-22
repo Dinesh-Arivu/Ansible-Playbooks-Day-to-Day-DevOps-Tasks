@@ -1,0 +1,14 @@
+---
+- name: Deploy application
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Pull latest code
+      git:
+        repo: https://github.com/example/app.git
+        dest: /var/www/app
+        version: main
+    - name: Restart app service
+      systemd:
+        name: app
+        state: restarted

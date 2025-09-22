@@ -1,20 +1,30 @@
 ---
-- name: Ensure services are running
+- name: Ensure critical services are running
   hosts: all
   become: yes
+
+  vars:
+    services:
+      - docker
+      - nginx
+      - mysql
+
   tasks:
-    - name: Ensure Docker is running
+    - name: Ensure services are enabled and running
       systemd:
-        name: docker
+        name: "{{ item }}"
         state: started
         enabled: yes
-    - name: Ensure Nginx is running
-      systemd:
-        name: nginx
-        state: started
-        enabled: yes
-    - name: Ensure MySQL is running
-      systemd:
-        name: mysql
-        state: started
-        enabled: yes
+      loop: "{{ services }}"
+
+    - name: Check if Nginx is responding
+      uri:
+        url: http://localhost
+        status_code: 200
+      when: "'nginx' in services"
+
+    - name: Check if MySQL is accepting connections
+      mysql_ping:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      when: "'mysql' in services"

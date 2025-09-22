@@ -1,14 +1,38 @@
 ---
-- name: Clear old logs
+- name: Manage system logs
   hosts: all
   become: yes
+
+  vars:
+    log_dir: /var/log
+    log_age: 7d
+
   tasks:
-    - name: Remove logs older than 7 days
+    - name: Rotate and compress logs using logrotate
+      copy:
+        dest: /etc/logrotate.d/custom-logs
+        content: |
+          {{ log_dir }}/*.log {
+              daily
+              rotate 7
+              compress
+              delaycompress
+              missingok
+              notifempty
+              create 0640 root adm
+              sharedscripts
+              postrotate
+                  systemctl reload rsyslog >/dev/null 2>&1 || true
+              endscript
+          }
+
+    - name: Find logs older than {{ log_age }}
       find:
-        paths: /var/log
-        age: 7d
+        paths: "{{ log_dir }}"
+        age: "{{ log_age }}"
         recurse: yes
       register: old_logs
+
     - name: Delete old logs
       file:
         path: "{{ item.path }}"

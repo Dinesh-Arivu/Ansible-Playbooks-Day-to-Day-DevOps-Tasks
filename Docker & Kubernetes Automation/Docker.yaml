@@ -1,0 +1,11 @@
+---
+- name: Deploy Docker container
+  hosts: docker_nodes
+  become: yes
+  tasks:
+    - name: Run Nginx container
+      docker_container:
+        name: mynginx
+        image: nginx:latest
+        ports:
+          - 80:80

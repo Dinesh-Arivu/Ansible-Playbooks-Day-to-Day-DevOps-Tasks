@@ -1,0 +1,8 @@
+---
+- name: Deploy k8s app
+  hosts: localhost
+  tasks:
+    - name: Apply deployment file
+      k8s:
+        state: present
+        src: k8s/deployment.yaml

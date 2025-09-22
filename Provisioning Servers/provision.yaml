@@ -1,0 +1,64 @@
+---
+- name: Provision servers with base packages and users
+  hosts: all
+  become: yes
+
+  vars:
+    common_packages:
+      - git
+      - curl
+      - vim
+      - htop
+      - unzip
+      - tree
+      - wget
+    users:
+      - name: devops
+        groups: sudo
+        ssh_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install common packages
+      apt:
+        name: "{{ common_packages }}"
+        state: present
+
+    - name: Ensure users exist
+      user:
+        name: "{{ item.name }}"
+        groups: "{{ item.groups | default(omit) }}"
+        state: present
+        shell: /bin/bash
+      loop: "{{ users }}"
+
+    - name: Add SSH keys for users
+      authorized_key:
+        user: "{{ item.name }}"
+        key: "{{ item.ssh_key }}"
+      loop: "{{ users }}"
+
+    - name: Configure SSH daemon (disable root login & password auth)
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+      with_items:
+        - { regexp: '^PermitRootLogin', line: 'PermitRootLogin no' }
+        - { regexp: '^PasswordAuthentication', line: 'PasswordAuthentication no' }
+      notify: Restart SSH
+
+    - name: Set timezone
+      timezone:
+        name: Asia/Kolkata   # change as per requirement
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: ssh
+        state: restarted

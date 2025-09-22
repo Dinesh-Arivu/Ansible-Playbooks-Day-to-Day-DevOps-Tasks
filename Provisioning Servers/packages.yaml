@@ -1,0 +1,16 @@
+---
+- name: Provision servers with base packages
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+    - name: Install common packages
+      apt:
+        name:
+          - git
+          - curl
+          - vim
+          - htop
+        state: present

@@ -1,10 +1,25 @@
+---
 - name: Restore MySQL DB
   hosts: dbservers
   become: yes
   vars:
+    mysql_root_user: root
+    mysql_root_password: "{{ vault_mysql_root_password }}"
+    mysql_db: mydb
     backup_file: /backup/mydb-2025-09-22-120000.sql
 
   tasks:
+    - name: Check if backup file exists
+      stat:
+        path: "{{ backup_file }}"
+      register: backup_stat
+
+    - name: Fail if backup file does not exist
+      fail:
+        msg: "Backup file {{ backup_file }} not found!"
+      when: not backup_stat.stat.exists
+
     - name: Restore DB from backup
-      command: >
-        mysql -u root -p{{ mysql_root_password }} mydb < {{ backup_file }}
+      shell: "mysql -u {{ mysql_root_user }} -p'{{ mysql_root_password }}' {{ mysql_db }} < {{ backup_file }}"
+      args:
+        executable: /bin/bash

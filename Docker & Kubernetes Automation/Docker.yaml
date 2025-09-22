@@ -1,11 +1,33 @@
 ---
-- name: Deploy Docker container
+- name: Deploy Docker containers
   hosts: docker_nodes
   become: yes
-  tasks:
-    - name: Run Nginx container
-      docker_container:
-        name: mynginx
+
+  vars:
+    containers:
+      - name: mynginx
         image: nginx:latest
         ports:
-          - 80:80
+          - "80:80"
+        volumes:
+          - "/data/nginx:/usr/share/nginx/html"
+        env:
+          ENV: production
+
+  tasks:
+    - name: Ensure Docker is installed
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Run Docker containers
+      docker_container:
+        name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        state: started
+        restart_policy: always
+        published_ports: "{{ item.ports }}"
+        volumes: "{{ item.volumes | default(omit) }}"
+        env: "{{ item.env | default(omit) }}"
+      loop: "{{ containers }}"

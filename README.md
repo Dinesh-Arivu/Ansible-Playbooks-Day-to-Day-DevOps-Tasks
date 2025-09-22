@@ -231,7 +231,7 @@ ansiblePlaybook(
 1. Clone this repo:
 
 ```bash
-git clone https://github.com/username/devops-ansible-tasks.git
+git clone https://github.com/Dinesh-Arivu/Ansible-Playbooks-Day-to-Day-DevOps-Tasks.git
 ```
 
 2. Update `inventory.ini` with your hosts.

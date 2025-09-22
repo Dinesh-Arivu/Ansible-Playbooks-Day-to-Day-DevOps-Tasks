@@ -1,0 +1,37 @@
+---
+- name: Backup MySQL database
+  hosts: dbservers
+  become: yes
+  vars:
+    backup_dir: /backup
+    mysql_root_user: root
+    mysql_root_password: "{{ vault_mysql_root_password }}"   # keep password in Ansible Vault
+    mysql_db: mydb
+
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Dump MySQL DB with timestamp
+      command: >
+        mysqldump -u {{ mysql_root_user }}
+        -p{{ mysql_root_password }}
+        {{ mysql_db }}
+        > {{ backup_dir }}/{{ mysql_db }}-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}.sql
+      args:
+        creates: "{{ backup_dir }}/{{ mysql_db }}-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}.sql"
+
+    - name: Compress backup file
+      archive:
+        path: "{{ backup_dir }}/{{ mysql_db }}-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}.sql"
+        dest: "{{ backup_dir }}/{{ mysql_db }}-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}.tar.gz"
+        format: gz
+      when: ansible_facts['os_family'] != "Windows"
+
+    - name: Remove raw SQL dump after compression
+      file:
+        path: "{{ backup_dir }}/{{ mysql_db }}-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}.sql"
+        state: absent

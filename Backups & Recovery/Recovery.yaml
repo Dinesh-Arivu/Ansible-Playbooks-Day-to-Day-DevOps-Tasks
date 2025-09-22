@@ -1,0 +1,10 @@
+- name: Restore MySQL DB
+  hosts: dbservers
+  become: yes
+  vars:
+    backup_file: /backup/mydb-2025-09-22-120000.sql
+
+  tasks:
+    - name: Restore DB from backup
+      command: >
+        mysql -u root -p{{ mysql_root_password }} mydb < {{ backup_file }}
